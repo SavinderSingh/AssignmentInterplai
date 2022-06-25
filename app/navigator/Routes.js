@@ -7,7 +7,6 @@ import {transitionConfig} from './ScreenAnim';
 
 import Splash from '../views/screens/auth/Splash';
 import Dashboard from '../views/screens/home/dashboard/Dashboard';
-import DrawerNavigator from './DrawerNavigator';
 
 const Stack = createStackNavigator();
 
@@ -40,7 +39,7 @@ const MainRoutes = () => {
         headerShown: false,
       }}>
       <Stack.Screen name={'Splash'} component={Splash} />
-      <Stack.Screen name={'Dashboard'} component={DrawerNavigator} />
+      <Stack.Screen name={'Dashboard'} component={Dashboard} />
     </Stack.Navigator>
   );
 };

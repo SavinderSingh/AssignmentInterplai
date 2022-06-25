@@ -1,142 +1,148 @@
-import {FlatList, StyleSheet, Text, View} from 'react-native';
-import React, {useEffect, useRef, useState} from 'react';
-import {useDispatch, useSelector} from 'react-redux';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  BackHandler,
+  Alert,
+} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {FlatList} from 'react-native';
+import ButtonView from '../../../components/ButtonView';
 import BaseView from '../../../hoc/BaseView';
-import SearchView from '../../../components/SearchView';
-import EntryItem from './items/EntryItem';
-import {setEntriesList} from '../../../../redux/actions/homeActions';
-import EntryDatabase from '../../../../sqliteDb/EntryDatabase';
-import {openDatabase} from 'react-native-sqlite-storage';
-import NoDataView from '../../../components/NoDataView';
+import {colors} from '../../../../values/colors';
 
 const Dashboard = props => {
-  const baseViewRef = useRef(null);
+  const arr = [
+    {id: '1', isVisible: false, same_id: '16', value: 'G', isRemoved: false},
+    {id: '2', isVisible: false, same_id: '6', value: 'F', isRemoved: false},
+    {id: '3', isVisible: false, same_id: '15', value: 'B', isRemoved: false},
+    {id: '4', isVisible: false, same_id: '11', value: 'H', isRemoved: false},
+    {id: '5', isVisible: false, same_id: '12', value: 'E', isRemoved: false},
+    {id: '6', isVisible: false, same_id: '2', value: 'F', isRemoved: false},
+    {id: '7', isVisible: false, same_id: '10', value: 'C', isRemoved: false},
+    {id: '8', isVisible: false, same_id: '13', value: 'D', isRemoved: false},
+    {id: '9', isVisible: false, same_id: '14', value: 'A', isRemoved: false},
+    {id: '10', isVisible: false, same_id: '7', value: 'C', isRemoved: false},
+    {id: '11', isVisible: false, same_id: '4', value: 'H', isRemoved: false},
+    {id: '12', isVisible: false, same_id: '5', value: 'E', isRemoved: false},
+    {id: '13', isVisible: false, same_id: '8', value: 'D', isRemoved: false},
+    {id: '14', isVisible: false, same_id: '9', value: 'A', isRemoved: false},
+    {id: '15', isVisible: false, same_id: '3', value: 'B', isRemoved: false},
+    {id: '16', isVisible: false, same_id: '1', value: 'G', isRemoved: false},
+  ];
+  const shuffleArray = arr.sort(() => Math.random() - 0.5);
 
-  const dispatch = useDispatch();
-
-  const entryDb = new EntryDatabase();
-
-  const entriesList = useSelector(state => state.home.entriesList);
-
-  const [searchText, setSearchText] = useState('');
-  const [list, setList] = useState([]);
+  const [list, setList] = useState(shuffleArray);
+  const [count, setCount] = useState(0);
   const [extraData, setExtraData] = useState(false);
 
-  useEffect(() => {
-    entryDb.initDB();
-    const unsubscribe = props.navigation.addListener('focus', () => {
-      // console.log('[Dashboard.js] Dashboard screen is focused');
-      init();
-    });
+  // console.log('[Dashboard.js] : ', arr, shuffleArray);
 
-    // Return the function to unsubscribe from the event so it gets removed on unmount
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.navigation]);
+  // useEffect(() => {}, []);
 
-  const init = () => {
-    entryDb.getEntriesList().then(response => {
-      const _list = entriesList;
-      _list.forEach(entry => {
-        response.forEach(it => {
-          if (it.id === entry.id) {
-            entry.isFavorite = true;
-          }
-        });
-      });
-      // console.log('[Favorite.js] Loading entries : ', _list);
-      setList(_list);
-      dispatch(setEntriesList(_list));
-    });
-  };
-
-  const _onSearch = value => {
-    setSearchText(value);
-    let _text = value.toLowerCase();
-    let filteredList = entriesList.filter(item => {
-      // search from a full list, and not from a previous search results list
-      if (item.API.toLowerCase().match(_text)) {
-        return item;
-      }
-    });
-    if (!_text || _text === '') {
-      setList(entriesList);
-    } else if (!filteredList.length) {
-      setList([]);
-    } else if (Array.isArray(filteredList)) {
-      setList(filteredList);
-    }
-  };
+  // const _updateList = () => {};
 
   const _renderItem = ({item, index}) => {
-    return (
-      <EntryItem
-        item={item}
-        index={index}
-        onFavorite={() => _onFavorite(item)}
-      />
-    );
+    if (item.isRemoved) {
+      return <View style={styles.removedView} />;
+    } else {
+      return (
+        <TouchableOpacity
+          style={{flex: 1}}
+          activeOpacity={0.7}
+          onPress={() => _onItemPress(item)}>
+          <View style={styles.itemView}>
+            {item.isVisible ? (
+              <Text style={styles.itemTitle}>{item.value}</Text>
+            ) : null}
+          </View>
+        </TouchableOpacity>
+      );
+    }
   };
 
-  const _onFavorite = item => {
+  const _onItemPress = item => {
     const _list = list;
+    const isTwoItemsVisibleList = _list.filter(it => it.isVisible);
+
     const index = _list.findIndex(it => it.id === item.id);
-    _list[index].isFavorite = !item.isFavorite;
-    setList(_list);
-    dispatch(setEntriesList(_list));
-    setExtraData(prevState => !prevState);
-    console.log('[Dashboard.js] on Fav : ', _list[index], item);
-    if (_list[index].isFavorite) {
-      // alert('Added to Favorite Successfully');
-      entryDb
-        .addEntry({
-          id: item.id,
-          API: item.API,
-          Description: item.Description,
-        })
-        .then(response => {
-          console.log('[Dashboard.js] Added Successfully : ', response);
-        })
-        .catch(error => {
-          console.log('[Dashboard.js] Added Failed : ', error);
-        });
-    } else {
-      // alert('Removed From Favorite!');
-      entryDb
-        .deleteEntry(item.id)
-        .then(response => {
-          console.log('[Dashboard.js] Delete Successfully : ', response);
-        })
-        .catch(error => {
-          console.log('[Dashboard.js] Delete Failed : ', error);
-        });
+    if (isTwoItemsVisibleList.length < 2) {
+      _list[index].isVisible = true;
     }
+
+    if (isTwoItemsVisibleList.length === 1) {
+      setCount(count => count + 1);
+      const previousItem = isTwoItemsVisibleList[0];
+      if (previousItem.id === item.same_id) {
+        const previousItemIndex = _list.findIndex(
+          it => it.id === previousItem.id,
+        );
+        setTimeout(() => {
+          _list[index].isRemoved = true;
+          _list[previousItemIndex].isRemoved = true;
+          _list.forEach(it => (it.isVisible = false));
+        }, 500);
+      } else {
+        setTimeout(() => {
+          _list.forEach(it => (it.isVisible = false));
+        }, 1000);
+      }
+    }
+    console.log(
+      '[Dashboard.js] onItemPress: ',
+      isTwoItemsVisibleList,
+      _list,
+      item,
+    );
+    setList(_list);
+    setExtraData(prevState => !prevState);
+  };
+
+  const _onRestart = () => {
+    setList(shuffleArray);
+    setCount(0);
+  };
+
+  const _onExitApp = () => {
+    Alert.alert('Memory Game', 'Are you sure you want to exit?', [
+      {text: 'Yes', onPress: () => BackHandler.exitApp()},
+      {text: 'Cancel', onPress: () => {}},
+    ]);
   };
 
   return (
-    <BaseView
-      ref={baseViewRef}
-      hasStatusBar
-      hasHeader
-      hasMenu
-      onMenuPress={() => props.navigation.toggleDrawer()}
-      title={'Dashboard'}>
+    <BaseView hasStatusBar>
       <View style={styles.parent}>
-        <SearchView
-          placeholder={'search your entry here'}
-          value={searchText}
-          onChangeText={text => _onSearch(text)}
-        />
-
-        <FlatList
-          data={list}
-          renderItem={_renderItem}
-          keyExtractor={(item, index) => item.id}
-          contentContainerStyle={{paddingBottom: 32}}
-          extraData={extraData}
-        />
-
-        {list.length < 1 && <NoDataView message={'No Entries found'} />}
+        <View style={styles.row}>
+          <Text style={styles.text}>
+            Matches {list.filter(it => it.isRemoved).length / 2}
+          </Text>
+          <Text style={styles.text}>Turn {count}</Text>
+        </View>
+        <View style={styles.view}>
+          <FlatList
+            data={list}
+            renderItem={_renderItem}
+            // keyExtractor={item => item.id}
+            numColumns={4}
+            scrollEnabled={false}
+            extraData={extraData}
+            // style={{alignSelf:'center'}}
+          />
+        </View>
+        <View style={styles.row}>
+          <ButtonView
+            title={'Exit'}
+            buttonStyle={{width: 120}}
+            onPress={() => _onExitApp()}
+          />
+          <ButtonView
+            title={'Restart'}
+            buttonStyle={{width: 120}}
+            onPress={() => _onRestart()}
+          />
+        </View>
       </View>
     </BaseView>
   );
@@ -147,6 +153,46 @@ export default Dashboard;
 const styles = StyleSheet.create({
   parent: {
     flex: 1,
-    backgroundColor: '#F7F7F7',
+    padding: 24,
+  },
+  view: {
+    flex: 1,
+    // justifyContent:'center',
+    // alignItems: 'center',
+    marginTop: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  text: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  itemView: {
+    height: 64,
+    width: 64,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderRadius: 4,
+  },
+  itemTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  removedView: {
+    height: 64,
+    width: 64,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderRadius: 4,
+    // flex:1,
+    marginRight: 20,
   },
 });

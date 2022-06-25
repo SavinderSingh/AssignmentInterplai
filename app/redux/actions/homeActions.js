@@ -10,23 +10,3 @@ export const setEntriesList = list => {
     });
   };
 };
-
-export const setCurrentTab = tab => {
-  return async dispatch => {
-    dispatch({
-      type: actionTypes.TAB,
-      currentTab: tab,
-    });
-  };
-};
-
-export const getEntriesList = page =>
-  new Promise((resolve, reject) => {
-    AxiosBase.get(apis.ENTRIES)
-      .then(response => {
-        resolve(response.data);
-      })
-      .catch(error => {
-        reject(error);
-      });
-  });
